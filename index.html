@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<head>
+    <title>Stranica</title>
+    <style>
+    div{
+        display: flex;
+    }
+    canvas{
+        margin:0 auto;
+    }
+    </style>
+</head>
+<body>
+    <div>
+    <canvas id="myCanvas" width="700" height ="500" style="background-color:aquamarine;"></canvas>
+</div>
+<script>var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+
+var player = { x: canvas.width/2 , y: 440, w:50, h:10, speed:0};
+var rightPressed = false;
+var leftPressed = false;
+
+
+const gravity = -0.3;
+var isGrounded = true;
+var relativeX;
+var relativeY;
+var angle = 0;
+var xView = 0;
+var yView = 0;
+
+let playerText = new Image();
+playerText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player1.png?raw=true';
+let armText = new Image();
+armText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player2.png?raw=true';
+let terrainText = new Image();
+terrainText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/terrain.png?raw=true';
+let bulletText = new Image();
+bulletText.src = 'https://github.com/Frkisocom/Space-Invader/blob/main/space%20invader/Textures/bullet.png?raw=true';
+let bg1Text = new Image();
+bg1Text.src = 'https://github.com/Frkisocom/doodlejump/blob/main/brda.jpg?raw=true';
+let bg2Text = new Image();
+bg2Text.src = 'https://github.com/Frkisocom/doodlejump/blob/main/lisce.png?raw=true';
+
+function drawBackground(){
+    ctx.drawImage(bg1Text, -xView, 500-yView/3, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bg2Text, -xView, 1000-yView/2, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+}
+
+var listTerrain = [];
+function Terrain(x, y, k, w, h){
+    this.x = x;
+    this.y = y;
+    this.w = w || 200;
+    this.h = h || 50;
+    this.tex = new Image();
+    switch(k){
+        case 0:
+            this.tex.src = 'terrain.png';
+            break;
+        case 1:
+            this.tex.src = 'terrain2.jpg';
+            break;
+    }
+}
+
+listTerrain[0]=new Terrain(0, canvas.height - 50, 1, canvas.width, 100);
+for(var i = 1; i < 15; i++){
+    listTerrain[i]=new Terrain(Math.random()*500, 500-i*120-Math.random()*50, 0, 200, 50);
+}
+listTerrain[15]=new Terrain(0, - 1300, 1, canvas.width, 50);
+
+var listProjectiles = [];
+function Projectile(x, y){
+    this.x = x;
+    this.y = y;
+    if(relativeX<0){
+        angle=Math.PI-angle;
+    }
+    this.dir = angle;
+    this.dist = 700;
+    this.s = 0;
+    this.v = 10;
+    this.alive = true;
+    this.color = player.color;
+}
+
+function drawProjectile(projectile){
+    console.log("OOF");
+    
+    projectile.x+=Math.cos(projectile.dir)*projectile.v;
+    projectile.y+=Math.sin(projectile.dir)*projectile.v;
+    ctx.save();
+    ctx.translate(xView, yView);
+    ctx.translate(projectile.x, projectile.y);
+    ctx.rotate(projectile.dir);
+    ctx.drawImage(bulletText, -8, -8);
+    ctx.restore();
+}
+
+function drawTerrain(){
+    for(var i = 0; i < listTerrain.length; i++){
+        ctx.drawImage(listTerrain[i].tex, listTerrain[i].x + xView, listTerrain[i].y + yView, listTerrain[i].w , listTerrain[i].h);
+    }
+}
+
+function drawPlayer(){
+    ctx.save();
+    ctx.translate(xView, yView);
+    ctx.translate(player.x, player.y);
+    if(relativeX<0){
+        ctx.scale(-1, 1);
+        angle=0-angle;
+    }
+    ctx.drawImage(playerText, -24, -24);
+    ctx.translate(0, -5);
+    ctx.rotate(angle+0.2);
+    ctx.drawImage(armText, 0, -24);
+    ctx.restore();
+}
+
+function playerCollision(){
+    for(var i = 0; i < listTerrain.length; i++){ 
+        if(player.y+13>=listTerrain[i].y&& player.y+13<=listTerrain[i].y+20&&
+            player.x>listTerrain[i].x&& player.x<listTerrain[i].x+listTerrain[i].w&& player.speed>=0){
+                player.y=listTerrain[i].y-13;
+                isGrounded=true;
+                player.speed=0;
+                break;
+        }
+        if((player.x<listTerrain[i].x||player.x>listTerrain[i].x+listTerrain[i].w)&&isGrounded){
+            isGrounded=false;
+        }
+        }
+    if(player.y>1000){
+        alert("killbox");
+        clearInterval(interval);
+        window.location.reload();
+    }
+}
+
+function movement(){
+    relativeX = uh.clientX - canvas.offsetLeft - player.x -xView;
+    relativeY = uh.clientY - canvas.offsetTop - player.y -yView;
+    angle = Math.atan(relativeY/relativeX);
+    
+    if(leftPressed && rightPressed){}
+    else if (leftPressed)
+    {
+        player.x -= 4;
+        relativeX += 4;
+    }
+    else if (rightPressed)
+    {
+        player.x += 4;
+        relativeX -= 4;
+    }
+    if(isGrounded==false){
+            player.y+=player.speed;
+            player.speed-=gravity;
+        }
+
+}
+
+function camera(){
+    /*if (player.x + xView > canvas.width-100){
+        xView-=5;
+    }
+    if (player.x < -xView+100){
+        xView+=5;
+    }*/
+    if (player.y + yView > canvas.height-100){
+        yView-=5;
+    }
+    if (player.y < -yView+200){
+        yView+=5;
+    }
+}
+
+function mouseDownHandler(){
+    listProjectiles.push(new Projectile(player.x, player.y));
+}
+
+var uh = {clientX:0 , clientY: 0};
+function mouseMoveHandler(e){
+    uh.clientX=e.clientX;
+    uh.clientY=e.clientY;
+}
+
+function keyDownHandler(e){
+    if((e.key==="w"||e.key==="W")&&isGrounded===true)
+        {
+            isGrounded=false;
+            player.speed=-10;
+            player.y+=player.speed;
+        }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = true;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = true;
+    }
+}
+
+function keyUpHandler(e){
+    if(e.key==="w"||e.key==="W")
+    {
+        upPressed = false;
+    }
+    if(e.key==="s"||e.key==="S")
+    {
+        downPressed = false;
+    }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = false;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = false;
+    }
+}
+
+function update(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    playerCollision();
+    movement();
+    drawBackground();
+    drawTerrain();
+    drawPlayer();
+    for(var i = 0; i < listProjectiles.length; i++){
+        drawProjectile(listProjectiles[i]);
+        if (listProjectiles[i].x>canvas.width||listProjectiles[i].x<0){
+            listProjectiles.splice(i, 1);
+        }
+    }
+    camera();
+}
+
+//dodaj yview u cursor lokaciju
+document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("keyup", keyUpHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("mousedown", mouseDownHandler, false);
+
+const interval = setInterval(update, 10);</script>
+</body>
+</html>
