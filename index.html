@@ -71,6 +71,7 @@ for(var i = 1; i < 15; i++){
 }
 listTerrain[15]=new Terrain(0, - 1300, 1, canvas.width, 50);
 
+
 var listProjectiles = [];
 function Projectile(x, y){
     this.x = x;
@@ -86,9 +87,7 @@ function Projectile(x, y){
     this.color = player.color;
 }
 
-function drawProjectile(projectile){
-    console.log("OOF");
-    
+function drawProjectile(projectile){    
     projectile.x+=Math.cos(projectile.dir)*projectile.v;
     projectile.y+=Math.sin(projectile.dir)*projectile.v;
     ctx.save();
@@ -113,8 +112,8 @@ function drawPlayer(){
         ctx.scale(-1, 1);
         angle=0-angle;
     }
-    ctx.drawImage(playerText, -24, -24);
-    ctx.translate(0, -5);
+    ctx.drawImage(playerText, -24, -48);
+    ctx.translate(0, -24);
     ctx.rotate(angle+0.2);
     ctx.drawImage(armText, 0, -24);
     ctx.restore();
@@ -122,9 +121,9 @@ function drawPlayer(){
 
 function playerCollision(){
     for(var i = 0; i < listTerrain.length; i++){ 
-        if(player.y+13>=listTerrain[i].y&& player.y+13<=listTerrain[i].y+20&&
+        if(player.y>=listTerrain[i].y&& player.y+13<=listTerrain[i].y+20&&
             player.x>listTerrain[i].x&& player.x<listTerrain[i].x+listTerrain[i].w&& player.speed>=0){
-                player.y=listTerrain[i].y-13;
+                player.y=listTerrain[i].y;
                 isGrounded=true;
                 player.speed=0;
                 break;
@@ -179,7 +178,7 @@ function camera(){
 }
 
 function mouseDownHandler(){
-    listProjectiles.push(new Projectile(player.x, player.y));
+    listProjectiles.push(new Projectile(player.x, player.y-24));
 }
 
 var uh = {clientX:0 , clientY: 0};
@@ -240,7 +239,6 @@ function update(){
     camera();
 }
 
-//dodaj yview u cursor lokaciju
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 document.addEventListener("mousemove", mouseMoveHandler, false);
