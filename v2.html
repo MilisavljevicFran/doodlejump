@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<head>
+    <title>Stranica</title>
+    <style>
+    div{
+        display: flex;
+    }
+    canvas{
+        margin:0 auto;
+    }
+    </style>
+</head>
+<body>
+    <div>
+    <canvas id="myCanvas" width="700" height ="500" style="background-color:aquamarine;"></canvas>
+</div>
+<script>var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+
+var player = { x: canvas.width/2 , y: 440, w:50, h:10, speed:0};
+var rightPressed = false;
+var leftPressed = false;
+
+
+const gravity = -0.3;
+var isGrounded = false;
+var relativeX;
+var relativeY;
+var angle = 0;
+
+let playerText = new Image();
+playerText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player1.png?raw=true';
+let armText = new Image();
+armText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player2.png?raw=true';
+let terrainText = new Image();
+terrainText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/terrain.png?raw=true';
+let bg1Text = new Image();
+bg1Text.src = 'https://github.com/Frkisocom/doodlejump/blob/main/brda.jpg?raw=true';
+
+function drawBackground(){
+    ctx.drawImage(bg1Text,0, 0, canvas.width, canvas.height);
+}
+
+function Terrain(ax, ay, bx, by){
+    this.ax=ax;
+    this.ay=ay;
+    this.bx=bx;
+    this.by=by;
+    this.m=(ay-by)/(ax-bx);
+    this.c=ay-this.m*ax;
+}
+var listTerrain = [];
+listTerrain[0]= new Terrain(0, canvas.height, canvas.width, canvas.height);
+listTerrain[1]= new Terrain(200, 200, 400, 400);
+listTerrain[2]= new Terrain(0, 200, 200, 200);
+listTerrain[3]= new Terrain(500, 300, 700, 100);
+listTerrain[4]= new Terrain(100, 100, 500, 100);
+
+function drawTerrain(teren){
+    ctx.beginPath();
+    ctx.lineWidth=10;
+    ctx.moveTo(teren.ax, teren.ay);
+    ctx.lineTo(teren.bx, teren.by);
+    ctx.closePath();
+    ctx.stroke();
+}
+
+function drawPlayer(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    if(relativeX<0){
+        ctx.scale(-1, 1);
+        angle=0-angle;
+    }
+    ctx.drawImage(playerText, -24, -48);
+    ctx.translate(0, -24);
+    ctx.rotate(angle+0.2);
+    ctx.drawImage(armText, 0, -24);
+    ctx.restore();
+}
+
+var j;
+function playerCollision(){
+    var boundary2=player.y;
+
+    for(var i = 0; i < listTerrain.length; i++){
+        var boundary = player.x*listTerrain[i].m+listTerrain[i].c;
+        if(player.speed>=0&&player.y+5>=boundary&&player.y<boundary+20&&
+        player.x>listTerrain[i].ax&&player.x<listTerrain[i].bx){
+            isGrounded=true;
+            boundary2 = boundary;
+            j=i;
+            break;
+        }
+        isGrounded=false;
+    }
+    if(isGrounded)
+    {
+        player.speed=0;
+        player.y=boundary2;
+    }
+    if(player.y>1000){
+        alert("killbox");
+        clearInterval(interval);
+        window.location.reload();
+    }
+}
+
+function movement(){
+    relativeX = uh.clientX - canvas.offsetLeft - player.x ;
+    relativeY = uh.clientY - canvas.offsetTop - player.y +24;
+    angle = Math.atan(relativeY/relativeX);
+    
+    if(leftPressed && rightPressed){}
+    else if (leftPressed)
+    {
+        player.x -= 4;
+        relativeX += 4;
+    }
+    else if (rightPressed)
+    {
+        player.x += 4;
+        relativeX -= 4;
+    }
+    if(isGrounded==false){
+        player.y+=player.speed;
+        player.speed-=gravity;
+    }
+
+}
+
+function mouseDownHandler(){
+}
+
+var uh = {clientX:0 , clientY: 0};
+function mouseMoveHandler(e){
+    uh.clientX=e.clientX;
+    uh.clientY=e.clientY;
+}
+
+function keyDownHandler(e){
+    if((e.key==="w"||e.key==="W")&&isGrounded===true)
+        {
+            isGrounded=false;
+            player.speed=-10;
+            player.y+=player.speed;
+        }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = true;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = true;
+    }
+}
+
+function keyUpHandler(e){
+    if(e.key==="w"||e.key==="W")
+    {
+        upPressed = false;
+    }
+    if(e.key==="s"||e.key==="S")
+    {
+        downPressed = false;
+    }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = false;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = false;
+    }
+}
+
+function update(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    playerCollision();
+    movement();
+    console.log(isGrounded);
+    drawBackground();
+    for(var i = 0; i < listTerrain.length; i++)
+    {
+        drawTerrain(listTerrain[i]);
+    }
+    drawPlayer();
+    
+}
+
+document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("keyup", keyUpHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("mousedown", mouseDownHandler, false);
+
+const interval = setInterval(update, 10);</script>
+</body>
+</html>
