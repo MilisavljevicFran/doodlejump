@@ -37,10 +37,6 @@ terrainText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/terrain.png
 let bg1Text = new Image();
 bg1Text.src = 'https://github.com/Frkisocom/doodlejump/blob/main/brda.jpg?raw=true';
 
-function drawBackground(){
-    ctx.drawImage(bg1Text,0, 0, canvas.width, canvas.height);
-}
-
 function Terrain(ax, ay, bx, by){
     this.ax=ax;
     this.ay=ay;
@@ -56,7 +52,26 @@ listTerrain[2]= new Terrain(0, 200, 200, 200);
 listTerrain[3]= new Terrain(500, 300, 700, 100);
 listTerrain[4]= new Terrain(100, 100, 500, 100);
 
+function Wall(x, ay, by){
+    this.ax = x;
+    this.bx = x;
+    this.ay = ay;
+    this.by = by;
+}
+//ay mora biti manji
+var listWalls = [];
+listWalls[0]= new Wall(0, -24, canvas.height);
+listWalls[1]= new Wall(200, 200, 400);
+listWalls[2]= new Wall(500, 400, 500);
+
+function drawBackground(){
+    ctx.drawImage(bg1Text,0, 0, canvas.width, canvas.height);
+}
+
+//U teren stavljaj linije po kojima se može hodat
+//ax mora biti manji
 function drawTerrain(teren){
+    ctx.strokeStyle=teren.color||"#000000";
     ctx.beginPath();
     ctx.lineWidth=10;
     ctx.moveTo(teren.ax, teren.ay);
@@ -68,6 +83,11 @@ function drawTerrain(teren){
 function drawPlayer(){
     ctx.save();
     ctx.translate(player.x, player.y);
+    ctx.fillStyle="#FFFF00";
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI*2);
+    ctx.closePath();
+    ctx.fill(); 
     if(relativeX<0){
         ctx.scale(-1, 1);
         angle=0-angle;
@@ -78,26 +98,30 @@ function drawPlayer(){
     ctx.drawImage(armText, 0, -24);
     ctx.restore();
 }
-
-var j;
+var currentPlatform=0;
+var boundary;
 function playerCollision(){
-    var boundary2=player.y;
-
     for(var i = 0; i < listTerrain.length; i++){
         var boundary = player.x*listTerrain[i].m+listTerrain[i].c;
-        if(player.speed>=0&&player.y+5>=boundary&&player.y<boundary+20&&
-        player.x>listTerrain[i].ax&&player.x<listTerrain[i].bx){
+        if(((player.y>=boundary&&lastY<=boundary)||(lastY>boundary&&lastY<boundary+5))&&
+        player.x>listTerrain[i].ax&&player.x<listTerrain[i].bx&&player.speed>=0){
             isGrounded=true;
-            boundary2 = boundary;
-            j=i;
+            currentPlatform=i;
             break;
         }
         isGrounded=false;
     }
-    if(isGrounded)
-    {
-        player.speed=0;
-        player.y=boundary2;
+    for(var i = 0; i < listWalls.length; i++){
+        if(player.y-22>listWalls[i].ay&&player.y<=listWalls[i].by){
+            if(player.x+24>listWalls[i].ax&&player.x<listWalls[i].ax){
+                rightPressed=false;
+                //break;
+            }
+            else if(player.x-24<listWalls[i].ax&&player.x>listWalls[i].ax){
+                leftPressed=false;
+                //break;
+            }
+        }
     }
     if(player.y>1000){
         alert("killbox");
@@ -106,11 +130,16 @@ function playerCollision(){
     }
 }
 
-function movement(){
+function movement1(){
     relativeX = uh.clientX - canvas.offsetLeft - player.x ;
-    relativeY = uh.clientY - canvas.offsetTop - player.y +24;
+    relativeY = uh.clientY - canvas.offsetTop - player.y + 24;
     angle = Math.atan(relativeY/relativeX);
-    
+    if(!isGrounded){
+        player.y+=player.speed;
+        player.speed-=gravity;
+    }
+}
+function movement2(){
     if(leftPressed && rightPressed){}
     else if (leftPressed)
     {
@@ -122,14 +151,44 @@ function movement(){
         player.x += 4;
         relativeX -= 4;
     }
-    if(isGrounded==false){
-        player.y+=player.speed;
-        player.speed-=gravity;
+    if(isGrounded){
+        
+        player.speed=0;
+        player.y=listTerrain[currentPlatform].m*player.x+listTerrain[currentPlatform].c;
     }
+}
 
+var projectile = {ax: 0, ay: 0, bx: 0, by: 0, color:"#FFF000", angle: 0, max: 500, s:10, alive: false};
+function platform(){
+    if(projectile.alive){
+        projectile.bx=projectile.ax+Math.cos(projectile.angle)*projectile.s;
+        projectile.by=projectile.ay+Math.sin(projectile.angle)*projectile.s;
+        projectile.s+=5;
+        if(projectile.s>=projectile.max)
+        {
+            projectile.alive=false;
+        }
+        drawTerrain(projectile);
+    }
+    for(var i = 0; i < listTerrain.length; i++){
+        boundary=projectile.bx*listTerrain[i].m+listTerrain.c;
+        if(projectile.bx>=listTerrain[i].ax&&projectile.bx<=listTerrain[i].bx&&
+            projectile.by-5<boundary&&projectile.by+5>boundary){
+            //TU SI STAO, NEZZ ZASTO TI NECE COLLIDAT, LOŠI SU PARAMETRI U OVOM GORE IF-u
+        }
+    }
 }
 
 function mouseDownHandler(){
+    projectile.alive=true;
+    projectile.ax = player.x;
+    projectile.ay = player.y-24;
+    projectile.angle = angle;
+    if(relativeX<0)
+    {
+        projectile.angle=Math.PI-projectile.angle;
+    }
+    projectile.s = 0;
 }
 
 var uh = {clientX:0 , clientY: 0};
@@ -173,20 +232,23 @@ function keyUpHandler(e){
         leftPressed = false;
     }
 }
-
+var lastY=player.y;
 function update(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    movement1();
     playerCollision();
-    movement();
-    console.log(isGrounded);
+    movement2();
     drawBackground();
     for(var i = 0; i < listTerrain.length; i++)
     {
         drawTerrain(listTerrain[i]);
     }
+    for(var i = 0; i < listWalls.length; i++){
+        drawTerrain(listWalls[i]);
+    }
+    platform();
     drawPlayer();
-    
+    lastY=player.y;
 }
 
 document.addEventListener("keydown", keyDownHandler, false);
@@ -195,5 +257,6 @@ document.addEventListener("mousemove", mouseMoveHandler, false);
 document.addEventListener("mousedown", mouseDownHandler, false);
 
 const interval = setInterval(update, 10);</script>
+
 </body>
 </html>
