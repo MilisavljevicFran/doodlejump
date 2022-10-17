@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<head>
+    <title>Stranica</title>
+    <style>
+    div{
+        display: flex;
+    }
+    canvas{
+        margin:0 auto;
+    }
+    </style>
+</head>
+<body>
+    <div>
+    <canvas id="myCanvas" width="700" height ="500" style="background-color:aquamarine;"></canvas>
+</div>
+<script>var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+
+var player = { x: canvas.width/2 , y: 440, w:50, h:10, speed:0};
+var rightPressed = false;
+var leftPressed = false;
+
+
+const gravity = -0.3;
+var isGrounded = false;
+var relativeX;
+var relativeY;
+var angle = 0;
+
+let playerText = new Image();
+playerText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player1.png?raw=true';
+let armText = new Image();
+armText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/player2.png?raw=true';
+let terrainText = new Image();
+terrainText.src = 'https://github.com/Frkisocom/doodlejump/blob/main/terrain.png?raw=true';
+let bg1Text = new Image();
+bg1Text.src = 'https://github.com/Frkisocom/doodlejump/blob/main/brda.jpg?raw=true';
+
+function Terrain(ax, ay, bx, by){
+    if(ax>bx){
+        var bruh=bx;
+        bx=ax;
+        ax=bruh;
+        bruh=by;
+        by=ay;
+        ay=bruh;
+    }
+    this.ax=ax;
+    this.ay=ay;
+    this.bx=bx;
+    this.by=by;
+    this.m=(ay-by)/(ax-bx);
+    this.c=ay-this.m*ax;
+}
+var listTerrain = [];
+listTerrain[0]= new Terrain(0, canvas.height, canvas.width, canvas.height);
+listTerrain[1]= new Terrain(200, 200, 400, 400);
+listTerrain[2]= new Terrain(0, 200, 200, 200);
+listTerrain[3]= new Terrain(500, 300, 700, 100);
+listTerrain[4]= new Terrain(100, 100, 500, 100);
+listTerrain[4]= new Terrain(-0, 0, -0, 0);
+
+function Wall(x, ay, by){
+    this.ax = x;
+    this.bx = x;
+    this.ay = ay;
+    this.by = by;
+}
+//ay mora biti manji
+var listWalls = [];
+listWalls[0]= new Wall(0, -24, canvas.height);
+listWalls[1]= new Wall(700, -24, canvas.height);
+listWalls[2]= new Wall(500, 400, 500);
+
+function drawBackground(){
+    ctx.drawImage(bg1Text,0, 0, canvas.width, canvas.height);
+}
+
+//U teren stavljaj linije po kojima se može hodat
+//ax mora biti manji
+function drawTerrain(teren){
+    ctx.strokeStyle=teren.color||"#000000";
+    ctx.beginPath();
+    ctx.lineWidth=10;
+    ctx.moveTo(teren.ax, teren.ay);
+    ctx.lineTo(teren.bx, teren.by);
+    ctx.closePath();
+    ctx.stroke();
+}
+
+function drawPlayer(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    if(relativeX<0){
+        ctx.scale(-1, 1);
+        angle=0-angle;
+    }
+    ctx.drawImage(playerText, -24, -48);
+    ctx.translate(0, -24);
+    ctx.rotate(angle+0.2);
+    ctx.drawImage(armText, 0, -24);
+    ctx.restore();
+}
+var currentPlatform=0;
+var boundary;
+function playerCollision(){
+    for(var i = 0; i < listTerrain.length; i++){
+        var boundary = player.x*listTerrain[i].m+listTerrain[i].c;
+        if(((player.y>=boundary&&lastY<=boundary)||(lastY>boundary&&lastY<boundary+5))&&
+        player.x>listTerrain[i].ax&&player.x<listTerrain[i].bx&&player.speed>=0){
+            isGrounded=true;
+            currentPlatform=i;
+            break;
+        }
+        isGrounded=false;
+    }
+    for(var i = 0; i < listWalls.length; i++){
+        if(player.y-22>listWalls[i].ay&&player.y<=listWalls[i].by){
+            if(player.x+24>listWalls[i].ax&&player.x<listWalls[i].ax){
+                rightPressed=false;
+                //break;
+            }
+            else if(player.x-24<listWalls[i].ax&&player.x>listWalls[i].ax){
+                leftPressed=false;
+                //break;
+            }
+        }
+    }
+    if(player.y>1000){
+        alert("killbox");
+        clearInterval(interval);
+        window.location.reload();
+    }
+}
+
+function movement1(){
+    relativeX = uh.clientX - canvas.offsetLeft - player.x ;
+    relativeY = uh.clientY - canvas.offsetTop - player.y + 24;
+    angle = Math.atan(relativeY/relativeX);
+    if(!isGrounded){
+        player.y+=player.speed;
+        player.speed-=gravity;
+    }
+}
+function movement2(){
+    if(leftPressed && rightPressed){}
+    else if (leftPressed)
+    {
+        player.x -= 4;
+        relativeX += 4;
+    }
+    else if (rightPressed)
+    {
+        player.x += 4;
+        relativeX -= 4;
+    }
+    if(isGrounded){
+        
+        player.speed=0;
+        player.y=listTerrain[currentPlatform].m*player.x+listTerrain[currentPlatform].c;
+    }
+}
+
+var projectile = {ax: 0, ay: 0, bx: 0, by: 0, ox: 0, oy: 0, color:"#FFF000", angle: 0, max: 500, s:10, alive: false};
+function platform(){
+    projectile.bx=projectile.ox+Math.cos(projectile.angle)*projectile.s;
+    projectile.by=projectile.oy+Math.sin(projectile.angle)*projectile.s;
+    projectile.s+=5;
+    if(projectile.s>=projectile.max)
+    {
+        projectile.alive=false;
+    }
+    drawTerrain(projectile);
+    for(var i = 0; i < listTerrain.length; i++){
+        boundary=projectile.bx*listTerrain[i].m+listTerrain[i].c;
+        if(projectile.bx>=listTerrain[i].ax&&projectile.bx<=listTerrain[i].bx&&
+        projectile.by-5<boundary&&projectile.by+5>boundary){
+            projectile.alive=false;
+            listTerrain.pop();
+            listTerrain.push(new Terrain(projectile.ax, projectile.ay, projectile.bx, projectile.by));
+            //projectile.bx=0;
+            break;
+        }
+    }
+    for(var i = 0; i < listWalls.length; i++){
+        if(projectile.bx>=listWalls[i].ax-5&&projectile.bx<=listWalls[i].ax+5&&
+        projectile.by>listWalls[i].ay&&projectile.by<listWalls[i].by){
+            projectile.alive=false;
+            listTerrain.pop();
+            listTerrain.push(new Terrain(projectile.ax, projectile.ay, projectile.bx, projectile.by));
+            projectile.bx=0;
+            break;
+        }
+    }
+
+    var flag=true;
+    for(var i = 0; i < listTerrain.length; i++){
+        boundary=projectile.ax*listTerrain[i].m+listTerrain[i].c;
+        if(projectile.ax>=listTerrain[i].ax&&projectile.ax<=listTerrain[i].bx&&
+        projectile.ay-5<boundary&&projectile.ay+5>boundary){
+            flag=true;
+            break;
+        }
+        flag=false;
+    }
+    if(!flag){
+        projectile.ay+=4;
+    }
+}
+
+function mouseDownHandler(){
+    projectile.alive=true;
+    projectile.color="#FFF000";
+    projectile.ax= player.x;
+    projectile.bx= player.x;
+    projectile.ox=player.x;
+    projectile.ay= player.y-24;
+    projectile.by= player.y-24;
+    projectile.oy= player.y-24;
+    projectile.angle = angle;
+    if(relativeX<0)
+    {
+        projectile.angle=Math.PI-projectile.angle;
+    }
+    projectile.s = 10;
+}
+
+var uh = {clientX:0 , clientY: 0};
+function mouseMoveHandler(e){
+    uh.clientX=e.clientX;
+    uh.clientY=e.clientY;
+}
+
+function keyDownHandler(e){
+    if((e.key==="w"||e.key==="W")&&isGrounded===true)
+        {
+            isGrounded=false;
+            player.speed=-10;
+            player.y+=player.speed;
+        }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = true;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = true;
+    }
+}
+
+function keyUpHandler(e){
+    if(e.key==="w"||e.key==="W")
+    {
+        upPressed = false;
+    }
+    if(e.key==="s"||e.key==="S")
+    {
+        downPressed = false;
+    }
+    if(e.key==="d"||e.key==="D")
+    {
+        rightPressed = false;
+    }
+    if(e.key==="a"||e.key==="A")
+    {
+        leftPressed = false;
+    }
+}
+var lastY=player.y;
+function update(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    movement1();
+    playerCollision();
+    movement2();
+    drawBackground();
+    for(var i = 0; i < listTerrain.length; i++)
+    {
+        drawTerrain(listTerrain[i]);
+    }
+    for(var i = 0; i < listWalls.length; i++){
+        drawTerrain(listWalls[i]);
+    }
+    if(projectile.alive)
+        platform();
+    drawPlayer();
+    lastY=player.y;
+}
+
+document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("keyup", keyUpHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("click", mouseDownHandler, false);
+
+const interval = setInterval(update, 10);</script>
+
+</body>
+</html>
